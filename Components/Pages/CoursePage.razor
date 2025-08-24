@@ -1,5 +1,6 @@
 ﻿@page "/courses/{id:int}"
 @attribute [Authorize(Roles = "Admin,Lecturer,Student")]
+@using CourseRegisterApp.Data
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.EntityFrameworkCore
@@ -7,8 +8,11 @@
 @using MudBlazor
 @using System.Security.Claims
 
+
 @inject CourseRegisterContext DbContext
 @inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Course Details</PageTitle>
 
@@ -25,8 +29,50 @@ else
         <MudText Typo="Typo.h4" GutterBottom="true">@CourseDetails.CourseName</MudText>
         <MudText Typo="Typo.subtitle1" Class="mb-4">
             Lecturer: @CourseDetails.LecturerNavigation?.Email @CourseDetails.LecturerNavigation?.FirstName @CourseDetails.LecturerNavigation?.LastName
-            
         </MudText>
+
+        @if (_isStudent && _isEnrolled)
+        {
+            <MudButton Variant="Variant.Filled" Color="Color.Error" Class="mb-4" OnClick="OpenLeaveCourseDialog">
+                Leave Course
+            </MudButton>
+        }
+
+        <MudGrid Class="my-4" AlignItems="AlignItems.Stretch">
+            <MudItem xs="12" md="6" Class="d-flex align-stretch">
+                <MudCard Elevation="2" Class="mud-card-full-height">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h6">Course Information</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText>
+                            <strong>Start Date:</strong> @CourseDetails.CourseStart.ToShortDateString()
+                        </MudText>
+                        <MudText>
+                            <strong>End Date:</strong> @CourseDetails.CourseEnd.ToShortDateString()
+                        </MudText>
+                        <MudText>
+                            <strong>Max Students:</strong> @CourseDetails.MaxStudents
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-stretch">
+                <MudCard Elevation="2" Class="mud-card-full-height">
+                    <MudCardHeader>
+                        <MudText Typo="Typo.h6">Enrollment Status</MudText>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudText>
+                            <strong>Enrolled Students:</strong> @_enrolledStudentsCount
+                        </MudText>
+                        <MudText>
+                            <strong>Available Places:</strong> @_freePlaces
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
 
         <MudDivider Class="my-4" />
 
@@ -37,9 +83,21 @@ else
             <MudTable T="CourseUser" Items="Students" Dense="true" Hover="true" Bordered="true" Striped="true">
                 <HeaderContent>
                     <MudTh>Student Email</MudTh>
+                    @if (_isAdminOrLecturer)
+                    {
+                        <MudTh>Actions</MudTh>
+                    }
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Student Email">@context.User?.Email</MudTd>
+                    @if (_isAdminOrLecturer)
+                    {
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle"
+                                           Color="Color.Error"
+                                           OnClick="@(() => OpenRemoveDialog(context))" />
+                        </MudTd>
+                    }
                 </RowTemplate>
             </MudTable>
         }
@@ -48,6 +106,22 @@ else
             <MudText Typo="Typo.body1" Color="Color.Secondary">No students are currently enrolled in this course.</MudText>
         }
     </MudContainer>
+
+    <!-- Confirmation Dialog -->
+    <MudDialog @bind-Visible="isRemoveDialogOpen">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Confirm Removal</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudText>
+                Are you sure you want to remove <strong class="font-weight-bold">@_userToRemove?.User?.Email</strong> from this course?
+            </MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="CloseDialog">Cancel</MudButton>
+            <MudButton OnClick="ConfirmRemovalAsync" Color="Color.Error" Variant="Variant.Filled">Remove</MudButton>
+        </DialogActions>
+    </MudDialog>
 }
 
 @code {
@@ -56,26 +130,118 @@ else
 
     private Course? CourseDetails { get; set; }
     private List<CourseUser> Students { get; set; } = new List<CourseUser>();
+    private int _enrolledStudentsCount;
+    private int _freePlaces;
+    private bool _isStudent;
+    private bool _isAdminOrLecturer;
+    private bool _isEnrolled;
+    private IList<string> UserRoles { get; set; } = new List<string>();
+    private int? _currentUserId;
+
+    // Dialog state
+    private bool isRemoveDialogOpen = false;
+    private CourseUser? _userToRemove;
 
     protected override async Task OnInitializedAsync()
     {
         try
         {
-            // Fetch the course details, including the lecturer's email
-            CourseDetails = await DbContext.Courses
-                .Include(c => c.LecturerNavigation)
-                .FirstOrDefaultAsync(c => c.CourseId == Id);
+            // Get the current user's authentication state
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+            var appUser = await UserManager.GetUserAsync(user);
+            if (appUser != null)
+            {
+                // Check user roles
+                UserRoles = await UserManager.GetRolesAsync(appUser);
+                _isStudent = UserRoles.Contains("Student");
+                _isAdminOrLecturer = UserRoles.Contains("Admin") || UserRoles.Contains("Lecturer");
 
-            // Fetch the list of students for this course
-            Students = await DbContext.CourseUsers
-                .Include(cu => cu.User)
-                .Where(cu => cu.CourseId == Id)
-                .ToListAsync();
+                // Get the user's ID from the User entity
+                var userData = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == appUser.Email);
+                if (userData != null)
+                {
+
+                    _currentUserId = userData.UserId;
+                }
+
+                // Fetch the course details, including the lecturer's email
+                CourseDetails = await DbContext.Courses
+                    .Include(c => c.LecturerNavigation)
+                    .FirstOrDefaultAsync(c => c.CourseId == Id);
+
+                if (CourseDetails != null)
+                {
+                    await LoadStudentsAsync();
+
+                    // Check if the current user is enrolled
+                    _isEnrolled = Students.Any(s => s.UserId == _currentUserId);
+                }
+            }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Error loading course details: {ex.Message}", Severity.Error);
             CourseDetails = null;
+        }
+    }
+
+    private async Task LoadStudentsAsync()
+    {
+        // Fetch the list of students for this course
+        Students = await DbContext.CourseUsers
+            .Include(cu => cu.User)
+            .Where(cu => cu.CourseId == Id)
+            .ToListAsync();
+
+        // Calculate enrollment statistics
+        _enrolledStudentsCount = Students.Count;
+        _freePlaces = CourseDetails.MaxStudents - _enrolledStudentsCount;
+    }
+
+    private void OpenRemoveDialog(CourseUser user)
+    {
+        _userToRemove = user;
+        isRemoveDialogOpen = true;
+    }
+
+    private void OpenLeaveCourseDialog()
+    {
+        // For a student leaving the course, the userToRemove is the current user
+        _userToRemove = Students.FirstOrDefault(s => s.UserId == _currentUserId);
+        isRemoveDialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        isRemoveDialogOpen = false;
+        _userToRemove = null; // Clear the user to remove
+    }
+
+    private async Task ConfirmRemovalAsync()
+    {
+        if (_userToRemove == null)
+        {
+            CloseDialog();
+            return;
+        }
+
+        try
+        {
+            // Find the CourseUser entry and remove it
+            DbContext.CourseUsers.Remove(_userToRemove);
+            await DbContext.SaveChangesAsync();
+
+            // Provide feedback
+            Snackbar.Add($"{_userToRemove.User?.Email} has been successfully removed from the course.", Severity.Success);
+
+            // Close the dialog and refresh the data
+            CloseDialog();
+            await LoadStudentsAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing student: {ex.Message}", Severity.Error);
         }
     }
 }

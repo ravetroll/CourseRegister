@@ -12,35 +12,39 @@
     <MudPaper Elevation="6" Class="d-flex justify-center align-center pa-4">
         <MudCarousel Class="mud-width-full" Style="height:400px;" ShowArrows="true" ShowBullets="true" AutoCycle="true" TData="object">
             <!-- First slide: Intro to the App -->
-            <MudCarouselItem>
+            <MudCarouselItem Color="Color.Dark">
                 <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-primary-light); color: white; height: 100%;">
-                    <MudText Typo="Typo.h4" Class="mb-4">Discover Amazing Features</MudText>
+                    <MudText Typo="Typo.h4" Class="mb-4">Course Registration</MudText>
                     <MudText Typo="Typo.body1" Class="mb-6">
-                        Explore everything our application has to offer. From powerful tools to seamless workflows, we've got you covered.
+                        Register for courses and keep contact with your colleagues
                     </MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/features">Learn More</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/courses">Learn More</MudButton>
                 </div>
             </MudCarouselItem>
 
             <!-- Second slide: User Testimonial -->
-            <MudCarouselItem>
+            <MudCarouselItem Color="Color.Dark">
                 <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-secondary-light); color: white; height: 100%;">
                     <MudText Typo="Typo.h4" Class="mb-4">What Our Users Say</MudText>
                     <MudText Typo="Typo.body1" Class="mb-6">
                         "This app has revolutionized my workflow! The interface is intuitive and the performance is outstanding." - Jane Doe
                     </MudText>
+                    <div class="d-flex gap-2">
+                     @for(int i = 0; i < 5; i++) {
                     <MudIcon Icon="@Icons.Material.Filled.Stars" Color="Color.Warning" Size="Size.Large" />
+                     }
+                    </div>
                 </div>
             </MudCarouselItem>
 
             <!-- Third slide: Call to Action -->
-            <MudCarouselItem>
+            <MudCarouselItem Color="Color.Dark">
                 <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-info-light); color: white; height: 100%;">
                     <MudText Typo="Typo.h4" Class="mb-4">Ready to Get Started?</MudText>
                     <MudText Typo="Typo.body1" Class="mb-6">
                         Dive right in and start creating! Your journey to a more productive experience begins now.
                     </MudText>
-                    <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/dashboard">Start Now</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/">Start Now</MudButton>
                 </div>
             </MudCarouselItem>
 
