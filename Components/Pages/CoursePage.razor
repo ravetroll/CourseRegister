@@ -27,9 +27,7 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
         <MudText Typo="Typo.h4" GutterBottom="true">@CourseDetails.CourseName</MudText>
-        <MudText Typo="Typo.subtitle1" Class="mb-4">
-            Lecturer: @CourseDetails.LecturerNavigation?.Email @CourseDetails.LecturerNavigation?.FirstName @CourseDetails.LecturerNavigation?.LastName
-        </MudText>
+       
 
         @if (_isStudent && _isEnrolled)
         {
@@ -40,29 +38,33 @@ else
 
         <MudGrid Class="my-4" AlignItems="AlignItems.Stretch">
             <MudItem xs="12" md="6" Class="d-flex align-stretch">
-                <MudCard Elevation="2" Class="mud-card-full-height">
+                <MudCard Elevation="2" Style="flex-grow: 1;">
                     <MudCardHeader>
                         <MudText Typo="Typo.h6">Course Information</MudText>
                     </MudCardHeader>
                     <MudCardContent>
+                        <MudText>
+                            <strong>Lecturer:</strong> @CourseDetails.LecturerNavigation?.Email @CourseDetails.LecturerNavigation?.FirstName @CourseDetails.LecturerNavigation?.LastName
+                        </MudText>
                         <MudText>
                             <strong>Start Date:</strong> @CourseDetails.CourseStart.ToShortDateString()
                         </MudText>
                         <MudText>
                             <strong>End Date:</strong> @CourseDetails.CourseEnd.ToShortDateString()
                         </MudText>
-                        <MudText>
-                            <strong>Max Students:</strong> @CourseDetails.MaxStudents
-                        </MudText>
+                        
                     </MudCardContent>
                 </MudCard>
             </MudItem>
             <MudItem xs="12" md="6" Class="d-flex align-stretch">
-                <MudCard Elevation="2" Class="mud-card-full-height">
+                <MudCard Elevation="2" Style="flex-grow: 1;">
                     <MudCardHeader>
                         <MudText Typo="Typo.h6">Enrollment Status</MudText>
                     </MudCardHeader>
                     <MudCardContent>
+                        <MudText>
+                            <strong>Max Students:</strong> @CourseDetails.MaxStudents
+                        </MudText>
                         <MudText>
                             <strong>Enrolled Students:</strong> @_enrolledStudentsCount
                         </MudText>

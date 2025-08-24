@@ -19,7 +19,7 @@
 <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
     <MudText Typo="Typo.h5" GutterBottom="true">Available Courses</MudText>
 
-    <MudTable T="Course" Items="Courses" Dense="true" Hover="true" Bordered="true" Striped="true">
+    <MudTable T="Course" Items="Courses" Dense="true" Hover="true" Bordered="true" Striped="true" Filter="new Func<Course,bool>(FilterFunc)">
         <ToolBarContent>
             <MudText Typo="Typo.h6">All Courses</MudText>
             <MudSpacer />
@@ -110,7 +110,7 @@
                                Label="End Date"
                                Required="true"
                                RequiredError="End Date is required!" />
-                <MudNumericField @bind-Value="editedCourse.MaxStudents" Label="Standard" Variant="Variant.Text" Min="1" Max="30" />
+                <MudNumericField @bind-Value="editedCourse.MaxStudents" Label="Max Students" Variant="Variant.Text" Min="1" Max="30" />
                 <div class="d-flex justify-content-end">
                     <MudButton OnClick="@(() => isEditDialogVisible = false)" Color="Color.Default" Class="mr-2">Cancel</MudButton>
                     <MudButton OnClick="@(() => SaveEditedCourse())" Color="Color.Primary" Variant="Variant.Filled">Save</MudButton>
@@ -125,7 +125,7 @@
             <MudText Typo="Typo.h6">Register for Course</MudText>
         </TitleContent>
         <DialogContent>
-            <MudText>Are you sure you want to register for **@registeredCourseName**?</MudText>
+            <MudText>Are you sure you want to register for <MudChip T="string" Label="true">@registeredCourseName</MudChip></MudText>
         </DialogContent>
         <DialogActions>
             <MudButton OnClick="@(() => isRegisterDialogVisible = false)" Color="Color.Default">Cancel</MudButton>
@@ -153,7 +153,7 @@
                                Label="End Date"
                                Required="true"
                                RequiredError="End Date is required!" />
-                <MudNumericField @bind-Value="newCourse.MaxStudents" Label="Standard" Variant="Variant.Text" Min="1" Max="30" />
+                <MudNumericField @bind-Value="newCourse.MaxStudents" Label="Max Students" Variant="Variant.Text" Min="1" Max="30" />
             </MudForm>
         </DialogContent>
         <DialogActions>
@@ -417,5 +417,15 @@
     private class EditCourseDto : CourseDto
     {
         public int CourseId { get; set; }
+    }
+
+    private bool FilterFunc(Course element)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.CourseName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+       
+        return false;
     }
 }
