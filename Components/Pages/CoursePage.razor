@@ -83,19 +83,28 @@ else
             <MudTable T="CourseUser" Items="Students" Dense="true" Hover="true" Bordered="true" Striped="true">
                 <HeaderContent>
                     <MudTh>Student Email</MudTh>
-                    @if (_isAdminOrLecturer)
-                    {
+                    
                         <MudTh>Actions</MudTh>
-                    }
+                   
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Student Email">@context.User?.Email</MudTd>
-                    @if (_isAdminOrLecturer)
+                    @if (_isAdmin || _isLecturer & context.Course.Lecturer == _currentUserId || _isStudent & context.UserId == _currentUserId)
                     {
                         <MudTd DataLabel="Actions">
+                            <MudTooltip Text="Remove Enrolled Student">
                             <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle"
                                            Color="Color.Error"
-                                           OnClick="@(() => OpenRemoveDialog(context))" />
+                                               OnClick="@(() => OpenRemoveDialog(context))" />
+                            </MudTooltip>
+                        </MudTd>
+                    }
+                    else
+                    {
+                        <MudTd DataLabel="Actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Circle"
+                                           Color="Color.Dark"
+                                           />
                         </MudTd>
                     }
                 </RowTemplate>
@@ -133,7 +142,8 @@ else
     private int _enrolledStudentsCount;
     private int _freePlaces;
     private bool _isStudent;
-    private bool _isAdminOrLecturer;
+    private bool _isAdmin;
+    private bool _isLecturer;
     private bool _isEnrolled;
     private IList<string> UserRoles { get; set; } = new List<string>();
     private int? _currentUserId;
@@ -155,8 +165,8 @@ else
                 // Check user roles
                 UserRoles = await UserManager.GetRolesAsync(appUser);
                 _isStudent = UserRoles.Contains("Student");
-                _isAdminOrLecturer = UserRoles.Contains("Admin") || UserRoles.Contains("Lecturer");
-
+                _isAdmin = UserRoles.Contains("Admin");
+                _isLecturer = UserRoles.Contains("Lecturer");
                 // Get the user's ID from the User entity
                 var userData = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == appUser.Email);
                 if (userData != null)

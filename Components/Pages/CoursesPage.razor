@@ -110,6 +110,7 @@
                                Label="End Date"
                                Required="true"
                                RequiredError="End Date is required!" />
+                <MudNumericField @bind-Value="editedCourse.MaxStudents" Label="Standard" Variant="Variant.Text" Min="1" Max="30" />
                 <div class="d-flex justify-content-end">
                     <MudButton OnClick="@(() => isEditDialogVisible = false)" Color="Color.Default" Class="mr-2">Cancel</MudButton>
                     <MudButton OnClick="@(() => SaveEditedCourse())" Color="Color.Primary" Variant="Variant.Filled">Save</MudButton>
@@ -409,7 +410,7 @@
         public DateTime? EndDate { get; set; }
 
         [Required]
-        public int MaxStudents { get; set; }
+        public int MaxStudents { get; set; } = 1;
     }
 
     // DTO class to hold edited course data
