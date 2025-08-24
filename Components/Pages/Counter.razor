@@ -1,0 +1,23 @@
+﻿@page "/counter"
+@rendermode InteractiveServer
+
+<PageTitle>Counter</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Counter</MudText>
+
+<MudPaper Class="d-flex align-center justify-center mud-width-full py-8">
+    <MudText Typo="Typo.h5" role="status">Current count: @currentCount</MudText>
+</MudPaper>
+
+<MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="IncrementCount" Class="mt-4">
+    Click me
+</MudButton>
+
+@code {
+    private int currentCount = 0;
+
+    private void IncrementCount()
+    {
+        currentCount++;
+    }
+}

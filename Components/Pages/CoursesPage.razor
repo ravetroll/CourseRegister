@@ -1,0 +1,399 @@
+﻿@page "/courses"
+@attribute [Authorize(Roles = "Admin,Lecturer,Student")]
+@using CourseRegisterApp.Data
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using CourseRegisterApp.CourseData
+@using System.Security.Claims
+@using MudBlazor
+@using System.ComponentModel.DataAnnotations
+
+@inject CourseRegisterContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject ISnackbar Snackbar
+
+<PageTitle>Course List</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+    <MudText Typo="Typo.h5" GutterBottom="true">Available Courses</MudText>
+
+    <MudTable T="Course" Items="Courses" Dense="true" Hover="true" Bordered="true" Striped="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">All Courses</MudText>
+            <MudSpacer />
+            <AuthorizeView Roles="Lecturer">
+                <Authorized>
+                    <MudButton OnClick="AddCourse" Color="Color.Primary" Variant="Variant.Filled" Class="mr-2">Add New Course</MudButton>
+                </Authorized>
+            </AuthorizeView>
+            <MudTextField T="string" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Course Name</MudTh>
+            <MudTh>Lecturer</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Course Name">@context.CourseName</MudTd>
+            <MudTd DataLabel="Lecturer">@context.LecturerNavigation?.Email</MudTd>
+            <MudTd DataLabel="Actions">
+                <AuthorizeView Roles="Admin" Context="ctx">
+                    <Authorized>
+                        <MudButton Color="Color.Info" OnClick="@(() => OpenEditCourseDialog(context.CourseId))" Class="mr-2">Edit</MudButton>
+                    </Authorized>
+                </AuthorizeView>
+
+                <AuthorizeView Roles="Lecturer" Context="ctx">
+                    <Authorized>
+                        @* Lecturers can only edit courses they are assigned to *@
+                        @if (CurrentUserLecturerId == context.Lecturer)
+                        {
+                            <MudButton Color="Color.Info" OnClick="@(() => OpenEditCourseDialog(context.CourseId))" Class="mr-2">Edit</MudButton>
+                        }
+                    </Authorized>
+                </AuthorizeView>
+
+                <AuthorizeView Roles="Student" Context="ctx">
+                    <Authorized>
+                        @* Students can only register if they are not already enrolled *@
+                        @if (!IsStudentRegisteredForCourse(context.CourseId))
+                        {
+                            <MudButton Color="Color.Primary" OnClick="@(() => OpenRegisterCourseDialog(context.CourseId))">Register</MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Color="Color.Success" Disabled="true">Registered</MudButton>
+                        }
+                    </Authorized>
+                </AuthorizeView>
+
+                <AuthorizeView Roles="Admin,Lecturer,Student" Context="ctx">
+                    <Authorized>
+
+                        <MudButton Color="Color.Info" Href="@($"/courses/{context.CourseId}")" Class="mr-2">View</MudButton>
+                        
+                    </Authorized>
+                </AuthorizeView>
+                
+              
+
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    @* The following dialogs would be used for the edit and registration processes *@
+    <MudDialog @bind-Visible="isEditDialogVisible" Style="min-width: 400px;">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Edit Course</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="editCourseForm" Model="editedCourse"  Class="d-flex flex-column gap-4">
+                <MudTextField @bind-Value="editedCourse.CourseName"
+                              Label="Course Name"
+                              Required="true"
+                              RequiredError="Course Name is required!" />
+
+                <MudDatePicker @bind-Date="editedCourse.StartDate"
+                               Label="Start Date"
+                               Required="true"
+                               RequiredError="Start Date is required!" />
+
+                <MudDatePicker @bind-Date="editedCourse.EndDate"
+                               Label="End Date"
+                               Required="true"
+                               RequiredError="End Date is required!" />
+                <div class="d-flex justify-content-end">
+                    <MudButton OnClick="@(() => isEditDialogVisible = false)" Color="Color.Default" Class="mr-2">Cancel</MudButton>
+                    <MudButton OnClick="@(() => SaveEditedCourse())" Color="Color.Primary" Variant="Variant.Filled">Save</MudButton>
+                </div>
+            </MudForm>
+        </DialogContent>
+    </MudDialog>
+
+    @* Dialog for registering for a course *@
+    <MudDialog @bind-Visible="isRegisterDialogVisible" Style="min-width: 400px;">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Register for Course</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudText>Are you sure you want to register for **@registeredCourseName**?</MudText>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => isRegisterDialogVisible = false)" Color="Color.Default">Cancel</MudButton>
+            <MudButton OnClick="ConfirmRegistration" Color="Color.Primary" Variant="Variant.Filled">Confirm</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    <MudDialog @bind-Visible="isAddCourseDialogVisible" Style="min-width: 400px;">
+        <TitleContent>
+            <MudText Typo="Typo.h6">Add New Course</MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudForm @ref="addCourseForm" Model="newCourse" OnValidSubmit="SaveNewCourse" Class="d-flex flex-column gap-4">
+                <MudTextField @bind-Value="newCourse.CourseName"
+                              Label="Course Name"
+                              Required="true"
+                              RequiredError="Course Name is required!" />
+
+                <MudDatePicker @bind-Date="newCourse.StartDate"
+                               Label="Start Date"
+                               Required="true"
+                               RequiredError="Start Date is required!" />
+
+                <MudDatePicker @bind-Date="newCourse.EndDate"
+                               Label="End Date"
+                               Required="true"
+                               RequiredError="End Date is required!" />
+            </MudForm>
+        </DialogContent>
+        <DialogActions>
+            <MudButton OnClick="@(() => isAddCourseDialogVisible = false)" Color="Color.Default">Cancel</MudButton>
+            <MudButton OnClick="@(() => SaveNewCourse())" Color="Color.Primary" Variant="Variant.Filled">Save</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+</MudContainer>
+@code {
+    // Properties to hold data for the page
+    private List<Course> Courses { get; set; } = new List<Course>();
+    private string searchString = string.Empty;
+
+    // Properties for user and roles
+    private string? CurrentUserId { get; set; }
+    private int? CurrentUserLecturerId { get; set; }
+    private List<CourseUser> UserRegistrations { get; set; } = new List<CourseUser>();
+    private IList<string> UserRoles { get; set; } = new List<string>();
+
+    // Properties for dialogs
+    private bool isEditDialogVisible = false;
+    private bool isRegisterDialogVisible = false;
+    private bool isAddCourseDialogVisible = false;
+    private int? editedCourseId;
+    private int? registeredCourseId;
+    private string registeredCourseName = string.Empty;
+
+    private CourseDto newCourse = new CourseDto();
+    private EditCourseDto editedCourse = new();
+    private MudForm addCourseForm = null!;
+    private MudForm editCourseForm = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCoursesAndUserDataAsync();
+    }
+
+    private async Task LoadCoursesAndUserDataAsync()
+    {
+        // Get the current user's authentication state
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        // Check if the user is authenticated
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            // Find the current user in the database to get their ID
+            var appUser = await UserManager.GetUserAsync(user);
+            if (appUser != null)
+            {
+                // Get the user's roles
+                UserRoles = await UserManager.GetRolesAsync(appUser);
+               
+
+                // Get the user's ID from the User entity
+                var userData = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == appUser.Email);
+                if (userData != null)
+                {
+                    CurrentUserId = appUser.Id;
+                    CurrentUserLecturerId = userData.UserId;
+                }
+                // If the user is a student, pre-load their course registrations
+                if (UserRoles.Contains("Student") && CurrentUserLecturerId.HasValue)
+                {
+                    UserRegistrations = await DbContext.CourseUsers.Where(cu => cu.UserId == CurrentUserLecturerId.Value).ToListAsync();
+                }
+            }
+
+            
+        }
+
+        // Load all courses with their lecturers included
+        Courses = await DbContext.Courses
+            .Include(c => c.LecturerNavigation)
+            .ToListAsync();
+    }
+
+    // Method to check if a student is registered for a course
+    private bool IsStudentRegisteredForCourse(int courseId)
+    {
+        if (CurrentUserLecturerId == null) return false;
+        return UserRegistrations.Any(cr => cr.CourseId == courseId);
+    }
+
+    // Method to handle course registration
+    
+
+    // Method to open the Add Course dialog
+    private void AddCourse()
+    {
+        newCourse = new CourseDto(); // Reset form data
+        isAddCourseDialogVisible = true;
+    }
+
+    // Method to open the registration dialog and load the course name
+    private async Task OpenRegisterCourseDialog(int courseId)
+    {
+        var course = await DbContext.Courses.FindAsync(courseId);
+        if (course != null)
+        {
+            registeredCourseId = courseId;
+            registeredCourseName = course.CourseName;
+            isRegisterDialogVisible = true;
+        }
+    }
+
+    // Method to handle course registration
+    private async Task ConfirmRegistration()
+    {
+        try
+        {
+            if (registeredCourseId != null && CurrentUserLecturerId != null)
+            {
+                var newRegistration = new CourseUser
+                {
+                    CourseId = registeredCourseId.Value,
+                    UserId = CurrentUserLecturerId.Value // This is the student's User ID
+                };
+
+                await DbContext.CourseUsers.AddAsync(newRegistration);
+                await DbContext.SaveChangesAsync();
+
+                Snackbar.Add("Registered for course successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Could not register for the course.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error during registration: {ex.Message}", Severity.Error);
+        }
+
+        isRegisterDialogVisible = false;
+        await LoadCoursesAndUserDataAsync();
+    }
+
+    // Method to open the Edit Course dialog and load data
+    private async Task OpenEditCourseDialog(int courseId)
+    {
+        var course = await DbContext.Courses.FindAsync(courseId);
+        if (course == null)
+        {
+            Snackbar.Add("Course not found.", Severity.Error);
+            return;
+        }
+
+        // Check if the current user is authorized to edit this course
+
+        if (UserRoles.Contains("Lecturer") && CurrentUserLecturerId != course.Lecturer)
+        {
+            Snackbar.Add("You are not authorized to edit this course.", Severity.Error);
+            return;
+        }
+
+        editedCourse = new EditCourseDto
+        {
+            CourseId = course.CourseId,
+            CourseName = course.CourseName,
+            StartDate = course.CourseStart.ToDateTime(new TimeOnly() ),
+            EndDate = course.CourseEnd.ToDateTime(new TimeOnly())
+        };
+
+        isEditDialogVisible = true;
+    }
+    // Method to save the edited course
+    private async Task SaveEditedCourse()
+    {
+        try
+        {
+            if (editCourseForm.IsValid)
+            {
+                var courseToUpdate = await DbContext.Courses.FindAsync(editedCourse.CourseId);
+                if (courseToUpdate == null)
+                {
+                    Snackbar.Add("Course not found.", Severity.Error);
+                    return;
+                }
+
+                courseToUpdate.CourseName = editedCourse.CourseName;
+                courseToUpdate.CourseStart = DateOnly.FromDateTime(editedCourse.StartDate!.Value);
+                courseToUpdate.CourseEnd = DateOnly.FromDateTime(editedCourse.EndDate!.Value);
+
+                await DbContext.SaveChangesAsync();
+
+                Snackbar.Add("Course updated successfully!", Severity.Success);
+                isEditDialogVisible = false;
+                await LoadCoursesAndUserDataAsync(); // Reload courses to show the changes
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating course: {ex.Message}", Severity.Error);
+        }
+    }
+    // Method to save a new course
+    private async Task SaveNewCourse()
+    {
+        if (addCourseForm.IsValid)
+        {
+            try
+            {
+                if (CurrentUserLecturerId == null)
+                {
+                    Snackbar.Add("User ID not found. Cannot add course.", Severity.Error);
+                    return;
+                }
+
+                var course = new Course
+                {
+                    CourseName = newCourse.CourseName,
+                    CourseStart = DateOnly.FromDateTime( newCourse.StartDate!.Value),
+                    CourseEnd =  DateOnly.FromDateTime(newCourse.EndDate!.Value),
+                    Lecturer = CurrentUserLecturerId.Value
+                };
+
+                await DbContext.Courses.AddAsync(course);
+                await DbContext.SaveChangesAsync();
+
+                Snackbar.Add("Course added successfully!");
+                isAddCourseDialogVisible = false;
+                await LoadCoursesAndUserDataAsync(); // Reload courses to show the new one
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error adding course: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    // DTO class to hold new course data
+    private class CourseDto
+    {
+        [Required]
+        public string? CourseName { get; set; }
+
+        [Required]
+        public DateTime? StartDate { get; set; }
+
+        [Required]
+        public DateTime? EndDate { get; set; }
+    }
+
+    // DTO class to hold edited course data
+    private class EditCourseDto : CourseDto
+    {
+        public int CourseId { get; set; }
+    }
+}

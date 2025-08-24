@@ -1,0 +1,50 @@
+﻿@using CourseRegisterApp.Components.Account
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using CourseRegisterApp.Data
+@using MudBlazor
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityRedirectManager RedirectManager
+
+@if (externalLogins.Length == 0)
+{
+    <MudText Typo="Typo.body1">
+        There are no external authentication services configured. See this <MudLink Href="https://go.microsoft.com/fwlink/?LinkID=532715" Target="_blank">article about setting up this ASP.NET application to support logging in via external services</MudLink>.
+    </MudText>
+}
+else
+{
+    <MudForm Class="form-horizontal" Action="Account/PerformExternalLogin" Method="post">
+        <MudStack Spacing="2">
+            <AntiforgeryToken />
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl" />
+            <MudText Typo="Typo.body1">
+                @foreach (var provider in externalLogins)
+                {
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Name="provider"
+                               Value="@provider.Name"
+                               Title="@($"Log in using your {provider.DisplayName} account")"
+                               Class="my-2">
+                        @provider.DisplayName
+                    </MudButton>
+                }
+            </MudText>
+        </MudStack>
+    </MudForm>
+}
+
+@code {
+    private AuthenticationScheme[] externalLogins = [];
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        externalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).ToArray();
+    }
+}

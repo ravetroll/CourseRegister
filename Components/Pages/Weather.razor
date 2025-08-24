@@ -1,0 +1,80 @@
+﻿@page "/weather"
+@using MudBlazor
+@using System.Net.Http.Json
+
+<PageTitle>Weather</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8">
+    <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-4">Weather Forecast</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-8">
+        This component displays weather forecast data in a stylish and interactive table.
+    </MudText>
+
+    <MudPaper Elevation="6" Class="d-flex justify-center align-center pa-4">
+        <MudTable ServerData="LoadData"
+                  Dense="@dense"
+                  Hover="@hover"
+                  Bordered="@bordered"
+                  Striped="@striped"
+                  Class="mud-width-full">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Weather Data</MudText>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x => x.Date)">Date</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<WeatherForecast, object>(x => x.TemperatureC)">Temp. (C)</MudTableSortLabel></MudTh>
+                <MudTh>Temp. (F)</MudTh>
+                <MudTh>Summary</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">@context.Date.ToShortDateString()</MudTd>
+                <MudTd DataLabel="Temp. (C)">@context.TemperatureC</MudTd>
+                <MudTd DataLabel="Temp. (F)">@context.TemperatureF</MudTd>
+                <MudTd DataLabel="Summary">@context.Summary</MudTd>
+            </RowTemplate>
+            <LoadingContent>
+                <MudText Align="Align.Center">
+                    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Class="ma-2" />
+                    <br />Loading data...
+                </MudText>
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager/>
+            </PagerContent>
+        </MudTable>
+    </MudPaper>
+</MudContainer>
+
+
+@code {
+    private bool dense = false;
+    private bool hover = true;
+    private bool striped = true;
+    private bool bordered = false;
+
+    // The ServerData function which handles data loading, sorting, and pagination
+    private async Task<TableData<WeatherForecast>> LoadData(TableState state, CancellationToken token)
+    {
+        // Simulate a delay to show the loading indicator
+        await Task.Delay(1000);
+
+        var startDate = DateOnly.FromDateTime(DateTime.Now);
+        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
+        var forecasts = Enumerable.Range(1, 10).Select(index => new WeatherForecast
+        {
+            Date = startDate.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = summaries[Random.Shared.Next(summaries.Length)]
+        }).ToArray();
+
+        return new TableData<WeatherForecast>() { Items = forecasts, TotalItems = forecasts.Length };
+    }
+
+    private class WeatherForecast
+    {
+        public DateOnly Date { get; set; }
+        public int TemperatureC { get; set; }
+        public string? Summary { get; set; }
+        public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    }
+}

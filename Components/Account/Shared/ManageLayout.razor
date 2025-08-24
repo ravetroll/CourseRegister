@@ -1,0 +1,17 @@
+﻿@inherits LayoutComponentBase
+@layout CourseRegisterApp.Components.Layout.MainLayout
+@using MudBlazor
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <MudText Typo="Typo.h3" GutterBottom="true">Manage your account</MudText>
+
+    <MudText Typo="Typo.h5" GutterBottom="true">Change your account settings</MudText>
+    <MudDivider Class="my-4" />
+
+    <MudGrid Spacing="3">
+
+        <MudItem lg="9">
+            @Body
+        </MudItem>
+    </MudGrid>
+</MudContainer>

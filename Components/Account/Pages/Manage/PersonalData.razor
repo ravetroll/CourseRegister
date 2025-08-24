@@ -1,0 +1,51 @@
+﻿@page "/Account/Manage/PersonalData"
+
+@inject IdentityUserAccessor UserAccessor
+@using MudBlazor
+
+<PageTitle>Personal Data</PageTitle>
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" sm="10" md="8" lg="6">
+<MudText Typo="Typo.h3" GutterBottom="true">Personal Data</MudText>
+</MudItem>
+</MudGrid>
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" sm="10" md="8" lg="6">
+        <MudCard>
+            <MudCardContent>
+                <MudText>
+                    Your account contains personal data that you have given us. This page allows you to download or delete that data.
+                </MudText>
+                <MudText Class="mt-4">
+                    <MudText Typo="Typo.body1" Color="Color.Error" Style="font-weight: bold;">
+                        Deleting this data will permanently remove your account, and this cannot be recovered.
+                    </MudText>
+                </MudText>
+                <MudForm>
+                    <MudButton Href="Account/Manage/DownloadPersonalData"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Class="mt-4">
+                        Download
+                    </MudButton>
+                </MudForm>
+                <MudButton Href="Account/Manage/DeletePersonalData"
+                           Variant="Variant.Filled"
+                           Color="Color.Error"
+                           Class="mt-4">
+                    Delete
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _ = await UserAccessor.GetRequiredUserAsync(HttpContext);
+    }
+}

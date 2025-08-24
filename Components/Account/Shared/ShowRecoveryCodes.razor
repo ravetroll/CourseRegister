@@ -1,0 +1,46 @@
+﻿@page "/Account/Manage/TwoFactorAuthentication/RecoveryCodes"
+
+
+<PageTitle>Recovery codes</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center my-12">
+    <MudPaper Elevation="25" Class="pa-8" Width="100%">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">Recovery Codes</MudText>
+        <MudDivider Class="my-2" />
+
+        @if (!string.IsNullOrEmpty(StatusMessage))
+        {
+            <MudAlert Severity="Severity.Success" Class="mt-4">
+                @StatusMessage
+            </MudAlert>
+        }
+
+        <MudAlert Severity="Severity.Warning" Class="mt-4">
+            <MudText>
+                <MudText Typo="Typo.h6" Class="mb-2">
+                    <strong>Put these codes in a safe place.</strong>
+                </MudText>
+                If you lose your device and don't have the recovery codes you will lose access to your account.
+            </MudText>
+        </MudAlert>
+
+        <MudGrid Class="mt-8">
+            <MudItem xs="12">
+                @foreach (var recoveryCode in RecoveryCodes)
+                {
+                    <MudPaper Elevation="1" Class="pa-2 my-2 d-flex justify-center">
+                        <code class="mud-text-secondary">@recoveryCode</code>
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string[] RecoveryCodes { get; set; } = [];
+
+    [Parameter]
+    public string? StatusMessage { get; set; }
+}

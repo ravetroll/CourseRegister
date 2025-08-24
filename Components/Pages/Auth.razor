@@ -1,0 +1,29 @@
+﻿@page "/auth"
+
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@attribute [Authorize]
+
+<PageTitle>Auth</PageTitle>
+
+
+
+<AuthorizeView>
+    Hello @context.User.Identity?.Name!
+</AuthorizeView>
+
+@code {
+    private ClaimsPrincipal? currentUser;
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUser = authenticationState.User;
+
+        // Now you can access user properties like:
+        string? username = currentUser?.Identity?.Name;
+        bool isAuthenticated = currentUser?.Identity?.IsAuthenticated ?? false;
+        var claims = currentUser?.Claims;
+        var userid = claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+    }
+}

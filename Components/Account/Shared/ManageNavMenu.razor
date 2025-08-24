@@ -1,0 +1,25 @@
+﻿@using Microsoft.AspNetCore.Identity
+@using CourseRegisterApp.Data
+
+@inject SignInManager<ApplicationUser> SignInManager
+
+
+<MudPaper Width="250px" Class="py-3" Elevation="0">
+    <MudNavMenu Dense>       
+        <MudNavLink Href="/Account/Manage">Profile</MudNavLink>
+        <MudNavLink Href="/Account/Manage/Email">Email</MudNavLink>
+        <MudNavLink Href="/Account/Manage/ChangePassword">Password</MudNavLink>
+        <MudNavLink Href="/Account/Manage/ExternalLogins" Disabled="!hasExternalLogins">External logins</MudNavLink>
+        <MudNavLink Href="/Account/Manage/TwoFactorAuthentication">Two-factor authentication</MudNavLink>
+        <MudNavLink Href="/Account/Manage/PersonalData">Personal data</MudNavLink>
+    </MudNavMenu>
+</MudPaper>
+
+@code {
+    private bool hasExternalLogins;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+    }
+}

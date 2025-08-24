@@ -1,0 +1,3 @@
+﻿dotnet ef dbcontext scaffold "Server=(localdb)\mssqllocaldb;Database=CourseRegister;Trusted_Connection=True;" Microsoft.EntityFrameworkCore.SqlServer -o CourseData -c CourseRegisterContext -f -d
+dotnet tool update --global dotnet-ef
+dotnet ef migrations add InitialCreate -c CourseRegisterContext -o CourseData\Migrations

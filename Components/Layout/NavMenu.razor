@@ -1,0 +1,86 @@
+﻿@using CourseRegisterApp.Data
+@using Microsoft.AspNetCore.Identity
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+@inject SignInManager<ApplicationUser> SignInManager
+
+<MudNavMenu>
+    <MudNavLink Href="" Match="NavLinkMatch.All">
+        <MudIcon Icon="@Icons.Material.Filled.Home" Class="me-2" /> Home
+    </MudNavLink>
+
+   
+    <AuthorizeView Roles="Admin,Lecturer,Student">
+        <Authorized>
+            <MudNavLink Href="/courses">
+                <MudIcon Icon="@Icons.Material.Filled.Book" Class="me-2" /> Courses
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin">
+        <Authorized>
+            <MudNavLink Href="/Admin/Users">
+                <MudIcon Icon="@Icons.Material.Filled.People" Class="me-2" /> User Admin
+            </MudNavLink>
+        </Authorized>
+    </AuthorizeView>
+    <AuthorizeView>
+        <Authorized>
+            
+            <MudNavGroup Title="@context.User.Identity?.Name" Expanded="false" Icon="@Icons.Material.Filled.Person">
+                <MudNavLink Href="/Account/Manage">Profile</MudNavLink>
+                <MudNavLink Href="/Account/Manage/Email">Email</MudNavLink>
+                <MudNavLink Href="/Account/Manage/ChangePassword">Password</MudNavLink>
+                <MudNavLink Href="/Account/Manage/ExternalLogins" Disabled="!hasExternalLogins">External logins</MudNavLink>
+                <MudNavLink Href="/Account/Manage/TwoFactorAuthentication">Two-factor authentication</MudNavLink>
+                <MudNavLink Href="/Account/Manage/PersonalData">Personal data</MudNavLink>
+            </MudNavGroup>
+            <MudForm Action="Account/Logout" Method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Text" Color="Color.Inherit" Class="mud-nav-link mud-nav-link-padding" StartIcon="@Icons.Material.Filled.Logout">
+                    Logout
+                </MudButton>
+            </MudForm>
+        </Authorized>
+        <NotAuthorized>
+            <MudNavLink Href="Account/Register">
+                <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="me-2" /> Register
+            </MudNavLink>
+            <MudNavLink Href="Account/Login">
+                <MudIcon Icon="@Icons.Material.Filled.Login" Class="me-2" /> Login
+            </MudNavLink>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudNavMenu>
+
+@code {
+    private string? currentUrl;
+    private bool hasExternalLogins;
+
+    protected override async Task OnInitializedAsync()
+    {
+        hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+    protected override void OnInitialized()
+    {
+
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+   
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

@@ -1,0 +1,13 @@
+﻿@page "/Account/Lockout"
+
+<PageTitle>Locked out</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex align-center justify-center my-12">
+    <MudPaper Elevation="25" Class="pa-8" Width="100%">
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-2">Account Locked Out</MudText>
+        <MudDivider Class="my-2" />
+        <MudAlert Severity="Severity.Error" Class="mt-4">
+            This account has been locked out due to multiple failed login attempts. Please try again later.
+        </MudAlert>
+    </MudPaper>
+</MudContainer>

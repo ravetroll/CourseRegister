@@ -1,0 +1,49 @@
+﻿@page "/"
+@using MudBlazor
+
+<PageTitle>Home</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8">
+    <MudText Typo="Typo.h2" Align="Align.Center" Class="mb-4">Welcome to Course Registrations</MudText>
+    <MudText Typo="Typo.subtitle1" Align="Align.Center" Class="mb-8">
+        We are so excited to have you here. Let's get you acquainted with the basics.
+    </MudText>
+
+    <MudPaper Elevation="6" Class="d-flex justify-center align-center pa-4">
+        <MudCarousel Class="mud-width-full" Style="height:400px;" ShowArrows="true" ShowBullets="true" AutoCycle="true" TData="object">
+            <!-- First slide: Intro to the App -->
+            <MudCarouselItem>
+                <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-primary-light); color: white; height: 100%;">
+                    <MudText Typo="Typo.h4" Class="mb-4">Discover Amazing Features</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-6">
+                        Explore everything our application has to offer. From powerful tools to seamless workflows, we've got you covered.
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" Href="/features">Learn More</MudButton>
+                </div>
+            </MudCarouselItem>
+
+            <!-- Second slide: User Testimonial -->
+            <MudCarouselItem>
+                <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-secondary-light); color: white; height: 100%;">
+                    <MudText Typo="Typo.h4" Class="mb-4">What Our Users Say</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-6">
+                        "This app has revolutionized my workflow! The interface is intuitive and the performance is outstanding." - Jane Doe
+                    </MudText>
+                    <MudIcon Icon="@Icons.Material.Filled.Stars" Color="Color.Warning" Size="Size.Large" />
+                </div>
+            </MudCarouselItem>
+
+            <!-- Third slide: Call to Action -->
+            <MudCarouselItem>
+                <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-info-light); color: white; height: 100%;">
+                    <MudText Typo="Typo.h4" Class="mb-4">Ready to Get Started?</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-6">
+                        Dive right in and start creating! Your journey to a more productive experience begins now.
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/dashboard">Start Now</MudButton>
+                </div>
+            </MudCarouselItem>
+
+        </MudCarousel>
+    </MudPaper>
+</MudContainer>

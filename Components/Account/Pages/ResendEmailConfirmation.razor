@@ -1,0 +1,92 @@
+﻿@page "/Account/ResendEmailConfirmation"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using CourseRegisterApp.Data
+@using MudBlazor
+
+@inject UserManager<ApplicationUser> UserManager
+@inject IEmailSender<ApplicationUser> EmailSender
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Resend email confirmation</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="d-flex flex-column align-center text-center">
+    <MudText Typo="Typo.h3" GutterBottom="true">Resend email confirmation</MudText>
+    <MudText Typo="Typo.h5" GutterBottom="true">Enter your email.</MudText>
+    <MudDivider Class="mb-4" />
+
+    @if (!string.IsNullOrEmpty(message))
+    {
+        <MudAlert Severity="Severity.Success" Class="mb-4">@message</MudAlert>
+    }
+
+    <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="10" md="8" lg="6">
+            <EditForm Model="Input" FormName="resend-email-confirmation" OnValidSubmit="OnValidSubmitAsync" method="post">
+                <MudCard>
+                    <MudCardContent>
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+                        <MudTextField @bind-Value="Input.Email"
+                                      For="() => Input.Email"
+                                      Label="Email"
+                                      Placeholder="name@example.com"
+                                      Variant="Variant.Text"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Email"
+                                      AdornmentColor="Color.Primary"
+                                      Margin="Margin.Normal" />
+                    </MudCardContent>
+                    <MudCardActions Class="d-flex justify-center pa-4">
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Size="Size.Large">
+                            Resend
+                        </MudButton>
+                    </MudCardActions>
+                </MudCard>
+            </EditForm>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private string? message;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    private async Task OnValidSubmitAsync()
+    {
+        var user = await UserManager.FindByEmailAsync(Input.Email!);
+        if (user is null)
+        {
+            message = "Verification email sent. Please check your email.";
+            return;
+        }
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code });
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        message = "Verification email sent. Please check your email.";
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+    }
+}

@@ -1,0 +1,105 @@
+﻿@page "/Account/Manage/DeletePersonalData"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using CourseRegisterApp.Data
+@using MudBlazor
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject IdentityUserAccessor UserAccessor
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<DeletePersonalData> Logger
+
+<PageTitle>Delete Personal Data</PageTitle>
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@message</MudAlert>
+}
+
+<MudText Typo="Typo.h3" GutterBottom="true">Delete Personal Data</MudText>
+
+<MudAlert Severity="Severity.Warning" Class="mb-4">
+    <MudText Typo="Typo.body1" Style="font-weight: bold;">
+        Deleting this data will permanently remove your account, and this cannot be recovered.
+    </MudText>
+</MudAlert>
+
+<MudCard>
+    <MudCardContent>
+        <EditForm Model="Input" FormName="delete-user" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" role="alert" />
+            @if (requirePassword)
+            {
+                <MudTextField T="string"
+                              @bind-Value="Input.Password"
+                              Label="Password"
+                              For="@(() => Input.Password)"
+                              InputType="InputType.Password"
+                              Adornment="Adornment.Start"
+                              Name="Input.Password"
+                              AdornmentIcon="@Icons.Material.Filled.Lock"
+                              AdornmentColor="Color.Warning"
+                              Margin="Margin.Normal" />
+            }
+            <div class="mt-4">
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Error"
+                           FullWidth="true"
+                           Size="Size.Large">
+                    Delete data and close my account
+                </MudButton>
+            </div>
+        </EditForm>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+    private bool requirePassword;
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        user = await UserAccessor.GetRequiredUserAsync(HttpContext);
+        requirePassword = await UserManager.HasPasswordAsync(user);
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        if (requirePassword && !await UserManager.CheckPasswordAsync(user, Input.Password))
+        {
+            message = "Error: Incorrect password.";
+            return;
+        }
+
+        var result = await UserManager.DeleteAsync(user);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException("Unexpected error occurred deleting user.");
+        }
+
+        await SignInManager.SignOutAsync();
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        Logger.LogInformation("User with ID '{UserId}' deleted themselves.", userId);
+
+        RedirectManager.RedirectToCurrentPage();
+    }
+
+    private sealed class InputModel
+    {
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+    }
+}

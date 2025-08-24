@@ -1,0 +1,108 @@
+﻿@page "/Account/LoginWithRecoveryCode"
+
+@using System.ComponentModel.DataAnnotations
+@using Microsoft.AspNetCore.Identity
+@using CourseRegisterApp.Data
+@using MudBlazor
+
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@inject IdentityRedirectManager RedirectManager
+@inject ILogger<LoginWithRecoveryCode> Logger
+
+<PageTitle>Recovery code verification</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Recovery code verification</MudText>
+<MudDivider Class="my-4" />
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@message</MudAlert>
+}
+
+<MudText Class="mb-4">
+    You have requested to log in with a recovery code. This login will not be remembered until you provide
+    an authenticator app code at log in or disable 2FA and log in again.
+</MudText>
+<MudGrid Justify="Justify.Center">
+    <MudItem xs="12" sm="10" md="8" lg="6">
+        <EditForm Model="Input" FormName="login-with-recovery-code" OnValidSubmit="OnValidSubmitAsync" method="post">
+            <MudCard>
+                <MudCardContent>
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <MudTextField @bind-Value="Input.RecoveryCode"
+                                  For="() => Input.RecoveryCode"
+                                  Label="Recovery Code"
+                                  Placeholder="Recovery Code"
+                                  Variant="Variant.Filled"
+                                  Adornment="Adornment.End"
+                                  Name="Input.RecoveryCode"
+                                  AdornmentIcon="@Icons.Material.Filled.LockOpen"
+                                  AdornmentColor="Color.Info"
+                                  Margin="Margin.Normal" />
+                </MudCardContent>
+                <MudCardActions Class="d-flex justify-center pa-4">
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               Size="Size.Large"
+                               FullWidth="true">
+                        Log in
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </EditForm>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private string? message;
+    private ApplicationUser user = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure the user has gone through the username & password screen first
+        user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
+            throw new InvalidOperationException("Unable to load two-factor authentication user.");
+    }
+
+    private async Task OnValidSubmitAsync()
+    {
+        var recoveryCode = Input.RecoveryCode.Replace(" ", string.Empty);
+
+        var result = await SignInManager.TwoFactorRecoveryCodeSignInAsync(recoveryCode);
+
+        var userId = await UserManager.GetUserIdAsync(user);
+
+        if (result.Succeeded)
+        {
+            Logger.LogInformation("User with ID '{UserId}' logged in with a recovery code.", userId);
+            RedirectManager.RedirectTo(ReturnUrl);
+        }
+        else if (result.IsLockedOut)
+        {
+            Logger.LogWarning("User account locked out.");
+            RedirectManager.RedirectTo("Account/Lockout");
+        }
+        else
+        {
+            Logger.LogWarning("Invalid recovery code entered for user with ID '{UserId}' ", userId);
+            message = "Error: Invalid recovery code entered.";
+        }
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [DataType(DataType.Text)]
+        [Display(Name = "Recovery Code")]
+        public string RecoveryCode { get; set; } = "";
+    }
+}

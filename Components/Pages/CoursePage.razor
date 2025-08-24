@@ -1,0 +1,81 @@
+﻿@page "/courses/{id:int}"
+@attribute [Authorize(Roles = "Admin,Lecturer,Student")]
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using CourseRegisterApp.CourseData
+@using MudBlazor
+@using System.Security.Claims
+
+@inject CourseRegisterContext DbContext
+@inject ISnackbar Snackbar
+
+<PageTitle>Course Details</PageTitle>
+
+@if (CourseDetails == null)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+        <MudText Typo="Typo.h5">Course not found.</MudText>
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+        <MudText Typo="Typo.h4" GutterBottom="true">@CourseDetails.CourseName</MudText>
+        <MudText Typo="Typo.subtitle1" Class="mb-4">
+            Lecturer: @CourseDetails.LecturerNavigation?.Email @CourseDetails.LecturerNavigation?.FirstName @CourseDetails.LecturerNavigation?.LastName
+            
+        </MudText>
+
+        <MudDivider Class="my-4" />
+
+        <MudText Typo="Typo.h5" GutterBottom="true">Enrolled Students</MudText>
+
+        @if (Students.Any())
+        {
+            <MudTable T="CourseUser" Items="Students" Dense="true" Hover="true" Bordered="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Student Email</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Student Email">@context.User?.Email</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Color="Color.Secondary">No students are currently enrolled in this course.</MudText>
+        }
+    </MudContainer>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Course? CourseDetails { get; set; }
+    private List<CourseUser> Students { get; set; } = new List<CourseUser>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Fetch the course details, including the lecturer's email
+            CourseDetails = await DbContext.Courses
+                .Include(c => c.LecturerNavigation)
+                .FirstOrDefaultAsync(c => c.CourseId == Id);
+
+            // Fetch the list of students for this course
+            Students = await DbContext.CourseUsers
+                .Include(cu => cu.User)
+                .Where(cu => cu.CourseId == Id)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading course details: {ex.Message}", Severity.Error);
+            CourseDetails = null;
+        }
+    }
+}
