@@ -1,0 +1,36 @@
+﻿@using CourseRegisterApp.CourseData
+@using CourseRegisterApp.ViewModels
+@using Microsoft.EntityFrameworkCore;
+@inject CourseRegisterContext DbContext
+
+<MudChart ChartType="ChartType.Pie" InputData="@data" InputLabels="@labels" Height="200px" />
+
+
+
+@code {
+    private List<CourseStudentCount> popularCourses;
+
+    double[] data;
+    string[] labels;
+
+    protected async override Task OnInitializedAsync()
+    {
+        popularCourses = await DbContext.CourseUsers
+        .Include(t => t.Course) // Include related Course data
+        .GroupBy(t => t.Course.CourseName) // Group by the course name
+        .Select(g => new CourseStudentCount
+        {
+            CourseName = g.Key,
+            StudentCount = g.Count() // Count the number of students in each group
+        })
+        .OrderByDescending(x => x.StudentCount) // Order from highest to lowest count
+        .Take(5) // Select only the top 5
+        .ToListAsync(); // Execute the query and return a list
+
+        data = popularCourses.Select(t => (double)t.StudentCount).ToArray();
+        labels = popularCourses.Select(t => t.CourseName).ToArray();
+
+    }
+
+   
+}

@@ -1,6 +1,6 @@
 ﻿@page "/"
 @using MudBlazor
-
+@using CourseRegisterApp.Components.Elements
 <PageTitle>Home</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="my-8">
@@ -45,6 +45,16 @@
                         Dive right in and start creating! Your journey to a more productive experience begins now.
                     </MudText>
                     <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/">Start Now</MudButton>
+                </div>
+            </MudCarouselItem>
+
+            <MudCarouselItem Color="Color.Dark">
+                <div class="d-flex flex-column align-center justify-center text-center pa-10" style="background-color: var(--mud-palette-info-light); color: white; height: 100%;">
+                    <MudText Typo="Typo.h4" Class="mb-4">See our popular courses</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-6">
+                        <PopularCourses></PopularCourses>
+                    </MudText>
+                    
                 </div>
             </MudCarouselItem>
 

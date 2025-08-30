@@ -45,19 +45,10 @@
             <MudTd DataLabel="End">@context.CourseEnd</MudTd>
             <MudTd DataLabel="Subscribed">@($"{context.CourseUsers.Count}/{context.MaxStudents}")</MudTd>
             <MudTd DataLabel="Actions">
-                <AuthorizeView Roles="Admin" Context="ctx">
+                <AuthorizeView Roles="Admin,Lecturer" Context="ctx">
                     <Authorized>
                         <MudButton Color="Color.Info" OnClick="@(() => OpenEditCourseDialog(context.CourseId))" Class="mr-2">Edit</MudButton>
-                    </Authorized>
-                </AuthorizeView>
-
-                <AuthorizeView Roles="Lecturer" Context="ctx">
-                    <Authorized>
-                        @* Lecturers can only edit courses they are assigned to *@
-                        @if (CurrentUserId == context.Lecturer)
-                        {
-                            <MudButton Color="Color.Info" OnClick="@(() => OpenEditCourseDialog(context.CourseId))" Class="mr-2">Edit</MudButton>
-                        }
+                        
                     </Authorized>
                 </AuthorizeView>
 
@@ -164,7 +155,7 @@
 
 </MudContainer>
 @code {
-    // Properties to hold data for the page
+        // Properties to hold data for the page
     private List<Course> Courses { get; set; } = new List<Course>();
     private string searchString = string.Empty;
 
@@ -267,6 +258,7 @@
     {
         try
         {
+            bool valid = true;
             if (registeredCourseId != null && CurrentUserId != null)
             {
                 var newRegistration = new CourseUser
@@ -276,16 +268,23 @@
                 };
 
                 var course = await DbContext.Courses.Where(t => t.CourseId == registeredCourseId).Include(t=>t.CourseUsers).SingleOrDefaultAsync();
-                if (course?.CourseUsers.Count < course?.MaxStudents)
+                if (course?.CourseUsers.Count >= course?.MaxStudents)
+                {
+                    Snackbar.Add("Course is already full!", Severity.Warning);
+                    valid = false;
+                }
+                if (course?.CourseStart < DateOnly.FromDateTime(DateTime.Now))
+                {
+                    Snackbar.Add("Course has already begun!", Severity.Warning);
+                    valid = false;
+                }
+
+                if (valid)
                 {
                     await DbContext.CourseUsers.AddAsync(newRegistration);
                     await DbContext.SaveChangesAsync();
 
                     Snackbar.Add("Registered for course successfully!", Severity.Success);
-                }
-                else
-                {
-                    Snackbar.Add("Course is already full!", Severity.Warning);
                 }
             }
             else
