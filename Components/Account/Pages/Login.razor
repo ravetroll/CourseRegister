@@ -51,11 +51,10 @@
                                   Name="Input.Password" />
                 </MudItem>
                 <MudItem xs="12" Class="d-flex justify-space-between align-center">
-                    <MudCheckBox T="string"
-                                 @bind-Checked="Input.RememberMe"
+                    <MudCheckBox T="bool" 
+                                 @bind-Value="Input.RememberMe"
                                  Label="Remember me?"
-                                 Color="Color.Primary"
-                                 Name="Input.RememberMe" />
+                                 Color="Color.Primary"></MudCheckBox>
                     <MudLink Href="/Account/ForgotPassword">Forgot your password?</MudLink>
                 </MudItem>
                 <MudItem xs="12">
@@ -93,6 +92,7 @@
 
     [SupplyParameterFromQuery]
     private string? ReturnUrl { get; set; }
+    
 
     protected override async Task OnInitializedAsync()
     {
@@ -111,7 +111,7 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User logged in.");
-            
+
             RedirectManager.RedirectTo(ReturnUrl);
         }
         else if (result.RequiresTwoFactor)
@@ -131,7 +131,7 @@
         }
     }
 
-    private sealed class InputModel
+    public sealed class InputModel
     {
         [Required]
         [EmailAddress]
@@ -142,6 +142,6 @@
         public string Password { get; set; } = "";
 
         [Display(Name = "Remember me?")]
-        public bool RememberMe { get; set; }
+        public bool RememberMe { get; set; } = true;
     }
 }

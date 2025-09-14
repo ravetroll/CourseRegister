@@ -268,17 +268,22 @@
                 };
 
                 var course = await DbContext.Courses.Where(t => t.CourseId == registeredCourseId).Include(t=>t.CourseUsers).SingleOrDefaultAsync();
-                if (course?.CourseUsers.Count >= course?.MaxStudents)
+                
+                if (valid && course?.CourseEnd < DateOnly.FromDateTime(DateTime.Now))
                 {
-                    Snackbar.Add("Course is already full!", Severity.Warning);
+                    Snackbar.Add("Course has already ended!", Severity.Warning);
                     valid = false;
                 }
-                if (course?.CourseStart < DateOnly.FromDateTime(DateTime.Now))
+                if (valid && course?.CourseStart < DateOnly.FromDateTime(DateTime.Now))
                 {
                     Snackbar.Add("Course has already begun!", Severity.Warning);
                     valid = false;
                 }
-
+                if (valid && course?.CourseUsers.Count >= course?.MaxStudents)
+                {
+                    Snackbar.Add("Course is already full!", Severity.Warning);
+                    valid = false;
+                }
                 if (valid)
                 {
                     await DbContext.CourseUsers.AddAsync(newRegistration);
