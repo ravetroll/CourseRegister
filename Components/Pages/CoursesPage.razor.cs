@@ -1,0 +1,288 @@
+﻿using CourseRegisterApp.CourseData;
+using Microsoft.EntityFrameworkCore;
+using MudBlazor;
+using System.ComponentModel.DataAnnotations;
+
+namespace CourseRegisterApp.Components.Pages
+{
+    public partial class CoursesPage
+    {
+        // Properties to hold data for the page
+        private List<Course> Courses { get; set; } = new List<Course>();
+        private string searchString = string.Empty;
+
+        // Properties for user and roles
+
+        private int? CurrentUserId { get; set; }
+        private List<CourseUser> UserRegistrations { get; set; } = new List<CourseUser>();
+        private IList<string> UserRoles { get; set; } = new List<string>();
+
+        // Properties for dialogs
+        private bool isEditDialogVisible = false;
+        private bool isRegisterDialogVisible = false;
+        private bool isAddCourseDialogVisible = false;
+        private int? editedCourseId;
+        private int? registeredCourseId;
+        private string registeredCourseName = string.Empty;
+
+        private CourseDto newCourse = new CourseDto();
+        private EditCourseDto editedCourse = new();
+        private MudForm addCourseForm = null!;
+        private MudForm editCourseForm = null!;
+
+        protected override async Task OnInitializedAsync()
+        {
+            await LoadCoursesAndUserDataAsync();
+        }
+
+        private async Task LoadCoursesAndUserDataAsync()
+        {
+            // Get the current user's authentication state
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            // Check if the user is authenticated
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                // Find the current user in the database to get their ID
+                var appUser = await UserManager.GetUserAsync(user);
+                if (appUser != null)
+                {
+                    // Get the user's roles
+                    UserRoles = await UserManager.GetRolesAsync(appUser);
+
+
+                    // Get the user's ID from the User entity
+                    var userData = await DbContext.Users.FirstOrDefaultAsync(u => u.Email == appUser.Email);
+                    if (userData != null)
+                    {
+
+                        CurrentUserId = userData.UserId;
+                    }
+                    // If the user is a student, pre-load their course registrations
+                    if (UserRoles.Contains("Student") && CurrentUserId.HasValue)
+                    {
+                        UserRegistrations = await DbContext.CourseUsers.Where(cu => cu.UserId == CurrentUserId.Value).ToListAsync();
+                    }
+                }
+
+
+            }
+
+            // Load all courses with their lecturers included
+            Courses = await DbContext.Courses
+                .Include(c => c.LecturerNavigation)
+                .Include(t => t.CourseUsers) // Include CourseUsers to check registrations)
+                .ToListAsync();
+        }
+
+        // Method to check if a student is registered for a course
+        private bool IsStudentRegisteredForCourse(int courseId)
+        {
+            if (CurrentUserId == null) return false;
+            return UserRegistrations.Any(cr => cr.CourseId == courseId);
+        }
+
+        // Method to handle course registration
+
+
+        // Method to open the Add Course dialog
+        private void AddCourse()
+        {
+            newCourse = new CourseDto(); // Reset form data
+            isAddCourseDialogVisible = true;
+        }
+
+        // Method to open the registration dialog and load the course name
+        private async Task OpenRegisterCourseDialog(int courseId)
+        {
+            var course = await DbContext.Courses.FindAsync(courseId);
+            if (course != null)
+            {
+                registeredCourseId = courseId;
+                registeredCourseName = course.CourseName;
+                isRegisterDialogVisible = true;
+            }
+        }
+
+        // Method to handle course registration
+        private async Task ConfirmRegistration()
+        {
+            try
+            {
+                bool valid = true;
+                if (registeredCourseId != null && CurrentUserId != null)
+                {
+                    var newRegistration = new CourseUser
+                    {
+                        CourseId = registeredCourseId.Value,
+                        UserId = CurrentUserId.Value // This is the student's User ID
+                    };
+
+                    var course = await DbContext.Courses.Where(t => t.CourseId == registeredCourseId).Include(t => t.CourseUsers).SingleOrDefaultAsync();
+
+                    if (valid && course?.CourseEnd < DateOnly.FromDateTime(DateTime.Now))
+                    {
+                        Snackbar.Add("Course has already ended!", Severity.Warning);
+                        valid = false;
+                    }
+                    if (valid && course?.CourseStart < DateOnly.FromDateTime(DateTime.Now))
+                    {
+                        Snackbar.Add("Course has already begun!", Severity.Warning);
+                        valid = false;
+                    }
+                    if (valid && course?.CourseUsers.Count >= course?.MaxStudents)
+                    {
+                        Snackbar.Add("Course is already full!", Severity.Warning);
+                        valid = false;
+                    }
+                    if (valid)
+                    {
+                        await DbContext.CourseUsers.AddAsync(newRegistration);
+                        await DbContext.SaveChangesAsync();
+
+                        Snackbar.Add("Registered for course successfully!", Severity.Success);
+                    }
+                }
+                else
+                {
+                    Snackbar.Add("Could not register for the course.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error during registration: {ex.Message}", Severity.Error);
+            }
+
+            isRegisterDialogVisible = false;
+            await LoadCoursesAndUserDataAsync();
+        }
+
+        // Method to open the Edit Course dialog and load data
+        private async Task OpenEditCourseDialog(int courseId)
+        {
+            var course = await DbContext.Courses.FindAsync(courseId);
+            if (course == null)
+            {
+                Snackbar.Add("Course not found.", Severity.Error);
+                return;
+            }
+
+            // Check if the current user is authorized to edit this course
+
+            if (UserRoles.Contains("Lecturer") && CurrentUserId != course.Lecturer)
+            {
+                Snackbar.Add("You are not authorized to edit this course.", Severity.Error);
+                return;
+            }
+
+            editedCourse = new EditCourseDto
+            {
+                CourseId = course.CourseId,
+                CourseName = course.CourseName,
+                StartDate = course.CourseStart.ToDateTime(new TimeOnly()),
+                EndDate = course.CourseEnd.ToDateTime(new TimeOnly()),
+                MaxStudents = course.MaxStudents
+            };
+
+            isEditDialogVisible = true;
+        }
+        // Method to save the edited course
+        private async Task SaveEditedCourse()
+        {
+            try
+            {
+                if (editCourseForm.IsValid)
+                {
+                    var courseToUpdate = await DbContext.Courses.FindAsync(editedCourse.CourseId);
+                    if (courseToUpdate == null)
+                    {
+                        Snackbar.Add("Course not found.", Severity.Error);
+                        return;
+                    }
+
+                    courseToUpdate.CourseName = editedCourse.CourseName;
+                    courseToUpdate.CourseStart = DateOnly.FromDateTime(editedCourse.StartDate!.Value);
+                    courseToUpdate.CourseEnd = DateOnly.FromDateTime(editedCourse.EndDate!.Value);
+                    courseToUpdate.MaxStudents = editedCourse.MaxStudents;
+                    await DbContext.SaveChangesAsync();
+
+                    Snackbar.Add("Course updated successfully!", Severity.Success);
+                    isEditDialogVisible = false;
+                    await LoadCoursesAndUserDataAsync(); // Reload courses to show the changes
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error updating course: {ex.Message}", Severity.Error);
+            }
+        }
+        // Method to save a new course
+        private async Task SaveNewCourse()
+        {
+            if (addCourseForm.IsValid)
+            {
+                try
+                {
+                    if (CurrentUserId == null)
+                    {
+                        Snackbar.Add("User ID not found. Cannot add course.", Severity.Error);
+                        return;
+                    }
+
+                    var course = new Course
+                    {
+                        CourseName = newCourse.CourseName,
+                        CourseStart = DateOnly.FromDateTime(newCourse.StartDate!.Value),
+                        CourseEnd = DateOnly.FromDateTime(newCourse.EndDate!.Value),
+                        Lecturer = CurrentUserId.Value,
+                        MaxStudents = newCourse.MaxStudents
+                    };
+
+                    await DbContext.Courses.AddAsync(course);
+                    await DbContext.SaveChangesAsync();
+
+                    Snackbar.Add("Course added successfully!");
+                    isAddCourseDialogVisible = false;
+                    await LoadCoursesAndUserDataAsync(); // Reload courses to show the new one
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error adding course: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+
+        // DTO class to hold new course data
+        private class CourseDto
+        {
+            [Required]
+            public string? CourseName { get; set; }
+
+            [Required]
+            public DateTime? StartDate { get; set; }
+
+            [Required]
+            public DateTime? EndDate { get; set; }
+
+            [Required]
+            public int MaxStudents { get; set; } = 1;
+        }
+
+        // DTO class to hold edited course data
+        private class EditCourseDto : CourseDto
+        {
+            public int CourseId { get; set; }
+        }
+
+        private bool FilterFunc(Course element)
+        {
+            if (string.IsNullOrWhiteSpace(searchString))
+                return true;
+            if (element.CourseName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            return false;
+        }
+    }
+}
